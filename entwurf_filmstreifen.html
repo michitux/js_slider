@@ -1,0 +1,301 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+  <head>
+    <title>Testseite</title>
+    <script type="text/javascript">
+      //<![CDATA[
+
+      function findPosX(obj)
+      {
+        var curleft = 0;
+        if(obj.offsetParent)
+          while(1) 
+        {
+          curleft += obj.offsetLeft;
+          if(!obj.offsetParent)
+            break;
+          obj = obj.offsetParent;
+        }
+          else if(obj.x)
+          curleft += obj.x;
+          return curleft;
+      }
+
+      function findPosY(obj)
+      {
+        var curtop = 0;
+        if(obj.offsetParent)
+          while(1)
+        {
+          curtop += obj.offsetTop;
+          if(!obj.offsetParent)
+            break;
+          obj = obj.offsetParent;
+        }
+          else if(obj.y)
+          curtop += obj.y;
+          return curtop;
+      }
+
+      var thumbnails = new Array(
+        "thumb_1.png",
+        "thumb_2.png",
+        "thumb_3.png",
+        "thumb_4.png",
+        "thumb_5.png",
+        "thumb_6.png",
+        "thumb_7.png",
+        "thumb_8.png"
+      )
+
+      thumbs = new Array()
+
+      for (thumb in thumbnails) {
+        var img = new Image()
+        img.src = thumbnails[thumb];
+        thumbs.push(img);
+      }
+
+      function init() {
+        for (var thumb in thumbs) {
+          if (!thumbs[thumb].complete) {
+            window.setTimeout("init", 500);
+            return;
+          }
+        }
+        fs = new Array();
+        fs[0] = new filmstreifen(0);
+        fs[1] = new filmstreifen(1);
+        for (var i = 2; i <= (800+fs[0].width)/fs[0].width; i++)
+          fs.push(new filmstreifen(i));
+
+        window.setInterval("move_forward(false)", 30);
+      
+        forward_button = document.createElement("a");
+        backward_button = document.createElement("a");
+
+        backward_image = document.createElement("img");
+        forward_image = document.createElement("img");
+
+        forward_image.src = "forward_img.png";
+        backward_image.src = "backward_img.png";
+
+        forward_button.appendChild(forward_image);
+        backward_button.appendChild(backward_image);
+
+        forward_button.onmouseover = function () {
+          forward_interval = window.setInterval("move_forward(true)", 10);
+        }
+
+        forward_button.onmouseout = function () {
+          window.clearInterval(forward_interval);
+        }
+        
+        backward_button.onmouseover = function () {
+          backward_interval = window.setInterval("move_backward(true)", 10);
+        }
+
+        backward_button.onmouseout = function () {
+          window.clearInterval(backward_interval);
+        }
+
+        with (forward_button.style) {
+          display = "none";
+          position = "absolute";
+          left = "20px";
+          top = "30px";
+        }
+        with (backward_button.style) {
+          display = "none";
+          position = "absolute";
+          left = "700px";
+          top = "30px";
+        }
+        with (document.getElementById("filmstreifen")) {
+          appendChild(forward_button);
+          appendChild(backward_button);
+
+          onmouseover = function () {
+            for (f in fs)
+              fs[f].stopped = true;
+            forward_button.style.display = "block";
+            backward_button.style.display = "block";
+          }
+
+          onmouseout = function () {
+            for (f in fs)
+              fs[f].stopped = false;
+            forward_button.style.display = "none";
+            backward_button.style.display = "none";
+          }
+        }
+      }
+
+      function move_forward(force) {
+        for (f in fs)
+          fs[f].move_forward(force);
+      }
+
+      function move_backward(force) {
+        for (f in fs)
+          fs[f].move_backward(force);
+      }
+
+      function total_width() {
+        var result = 0;
+        for (f in fs)
+          result += fs[f].width;
+        return result;
+      }
+
+      function startgrowth() {
+        curimg = document.getElementById('curimg');
+        var endwidth = curimg.width*1.2;
+        var endheight = curimg.height*1.2;
+        newimg = curimg.cloneNode(false);
+        newimg.style.position = 'absolute';
+        newimg.style.display = 'block';
+        newimg.style.zIndex = 100;
+        newimg.style.top = findPosY(curimg)+'px';
+        newimg.style.left = findPosX(curimg)+'px';
+        newimg.id = 'growimg';
+        newimg.onmouseout = function () {
+          stopgrowth();
+        }
+        document.getElementsByTagName('body')[0].appendChild(newimg);
+        curimggrowth = window.setInterval('grow('+curimg.width+','+curimg.height+','+endwidth+','+endheight+')', 10);
+      }
+      function stopgrowth() {
+        window.clearInterval(curimggrowth);
+        document.getElementsByTagName('body')[0].removeChild(newimg);
+        curimg.id = '';
+      }
+
+      function grow(width, height, newwidth, newheight) {
+        var img = document.getElementById('growimg');
+        if (img.width == newwidth)
+          window.clearInterval(curimggrowth);
+        var nextwidth = img.width+(newwidth-width)/100;
+        var nextheight = img.height+(newheight-height)/100;
+        var newx = findPosX(img)-(nextwidth-img.width)/2;
+        var newy = findPosY(img)-(nextheight-img.height)/2;
+        img.width = nextwidth;
+        img.style.left = newx;
+        img.height = nextheight;
+        img.style.top = newy;
+      }
+
+      function growth(img) {
+        this.img = img;
+
+        this.endwidth = this.img.width*1.2;
+        this.endheight = this.img.height*1.2;
+        
+        this.startx = findPosX(this.img);
+        this.starty = findPosY(this.img);
+
+        this.curx = this.starx;
+        this.cury = this.starty;
+
+        this.growimg = this.img.cloneNode(false);
+
+        with (this.growimg.style) {
+          position = 'absolute';
+          display = 'block';
+          zIndex = 100;
+          left = this.startx+'px';
+          top = this.starty+'px';
+        }
+
+        document.getElementyByName('body')[0].appendChild(this.growimg);
+
+        this.grow = function () {
+          if (img.width == newwidth)
+            window.clearInterval(curimggrowth);
+          var nextwidth = img.width+(newwidth-width)/100;
+          var nextheight = img.height+(newheight-height)/100;
+          var newx = findPosX(img)-(nextwidth-img.width)/2;
+          var newy = findPosY(img)-(nextheight-img.height)/2;
+          img.width = nextwidth;
+          img.style.left = newx;
+          img.height = nextheight;
+          img.style.top = newy;
+        }
+      }
+
+      
+      function filmstreifen(start) {
+        this.film_container = document.createElement("div");
+        this.width = 0;
+        document.getElementById("filmstreifen").appendChild(this.film_container);
+        for (var thumb in thumbs) {
+          img = thumbs[thumb].cloneNode(false);
+          img.onmouseover = function () {
+            this.id = 'curimg';
+            startgrowth();
+          }
+          this.film_container.appendChild(img);
+          this.width = img.width + 10 + this.width;
+        }
+        this.film_container.style.width = this.width+'px';
+        this.position = start * this.width;
+        this.film_container.style.left = this.position+'px';
+
+        this.stopped = false;
+
+        
+        this.move_forward = function (force) {
+          if (!this.stopped || force) {
+            this.position -= 1;
+            if (this.position <= -this.width)
+              this.position = total_width()-this.width;
+            this.film_container.style.left = this.position +'px';
+          }
+        }
+
+        this.move_backward = function (force) {
+          if (!this.stopped || force) {
+            this.position += 1;
+            if (this.position >= total_width()-this.width)
+              this.position = -this.width;
+            this.film_container.style.left = this.position + 'px';
+          }
+        }
+
+        return this;
+      }
+      //]]>
+    </script>
+    <style type="text/css">
+      body {
+        background-color: #3a4536;
+        color: yellow;
+      }
+
+      #filmstreifen {
+        width: 800px;
+        height: 150px;
+        overflow: hidden;
+        margin: 0 auto;
+        position: relative;
+      }
+
+      #filmstreifen div {
+        height: 100px;
+        position: absolute;
+        top:0;
+        background: black url(film_hintergrund.png) center left repeat-x;
+        padding: 25px 0;
+      }
+      #filmstreifen div img {
+        margin-right:10px;
+      }
+    </style>
+  </head>
+  <body onload="javascript:init();">
+    <div id="filmstreifen">
+      &nbsp;
+    </div>
+  </body>
+</html>

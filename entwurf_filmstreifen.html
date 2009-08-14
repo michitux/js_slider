@@ -38,29 +38,24 @@
         }
       }
 
-      var thumbnails = new Array(
-        "thumb_1.png",
-        "thumb_2.png",
-        "thumb_3.png",
-        "thumb_4.png",
-        "thumb_5.png",
-        "thumb_6.png",
-        "thumb_7.png",
-        "thumb_8.png"
-      )
-
       function init() {
-        new film_strip(document.getElementById('filmstreifen'), thumbnails);
+        new film_strip(document.getElementById('filmstreifen'));
       }
 
-      function film_strip(container, image_urls) {
+      function film_strip(container) {
         this.container = container;
         this.images = new Array();
 
-        for (thumb in thumbnails) {
-          var img = new Image()
-          img.src = thumbnails[thumb];
-          this.images.push(img);
+            
+        
+        for (var thumb in container.children) {
+          if (container.children[thumb].nodeType == 1) {
+            this.images.push(container.children[thumb].cloneNode(true));
+          }
+        }
+
+        while (this.container.hasChildNodes()) {
+          this.container.removeChild(this.container.firstChild);
         }
 
         this.stripes = new Array();
@@ -70,13 +65,13 @@
           this.width = 0;
           film_strip.container.appendChild(this.film_container);
           for (var thumb in film_strip.images) {
-            var img = film_strip.images[thumb].cloneNode(false);
+            var img = film_strip.images[thumb].cloneNode(true);
             img.onmouseover = function () {
               this.id = 'curimg';
               /*startgrowth();*/
             }
             this.film_container.appendChild(img);
-            this.width = img.width + 10 + this.width;
+            this.width = img.offsetWidth + 10 + this.width;
           }
           this.film_container.style.width = this.width+'px';
           this.position = start * this.width;
@@ -102,7 +97,7 @@
             }
           }
 
-          if (start + 1 < (film_strip.container.width+this.width)/this.width || start < 1) {
+          if (start + 1 < (film_strip.container.offsetWidth+this.width)/this.width || start < 1) {
             film_strip.stripes.push(new film_strip.stripe(start + 1, film_strip));
           }
 
@@ -114,15 +109,13 @@
         var strip = this;
 
         this.forward_button = document.createElement("a");
-        this.backward_button = document.createElement("a");
-
-        var backward_image = document.createElement("img");
         var forward_image = document.createElement("img");
-
         forward_image.src = "forward_img.png";
-        backward_image.src = "backward_img.png";
-
         this.forward_button.appendChild(forward_image);
+
+        this.backward_button = document.createElement("a");
+        var backward_image = document.createElement("img");
+        backward_image.src = "backward_img.png";
         this.backward_button.appendChild(backward_image);
 
         with (this.forward_button) {
@@ -303,11 +296,22 @@
       #filmstreifen div img {
         margin-right:10px;
       }
+
+      img {
+        border: 0;
+      }
     </style>
   </head>
   <body onload="javascript:init();">
     <div id="filmstreifen">
-      &nbsp;
+      <img src="thumb_1.png" alt="thumb" />
+      <a href="test"><img src="thumb_2.png" alt="thumb" /></a>
+      <img src="thumb_3.png" alt="thumb" />
+      <img src="thumb_4.png" alt="thumb" />
+      <img src="thumb_5.png" alt="thumb" />
+      <img src="thumb_6.png" alt="thumb" />
+      <img src="thumb_7.png" alt="thumb" />
+      <img src="thumb_8.png" alt="thumb" />
     </div>
   </body>
 </html>

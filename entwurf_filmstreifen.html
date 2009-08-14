@@ -6,36 +6,36 @@
     <script type="text/javascript">
       //<![CDATA[
 
-      function findPosX(obj)
-      {
+      function findPosX(obj) {
         var curleft = 0;
-        if(obj.offsetParent)
-          while(1) 
-        {
-          curleft += obj.offsetLeft;
-          if(!obj.offsetParent)
-            break;
-          obj = obj.offsetParent;
-        }
-          else if(obj.x)
+        if (obj.offsetParent) {
+          while(1) {
+            curleft += obj.offsetLeft;
+            if(!obj.offsetParent) {
+              break;
+            }
+            obj = obj.offsetParent;
+          }
+        } else if(obj.x) {
           curleft += obj.x;
           return curleft;
+        }
       }
 
-      function findPosY(obj)
-      {
+      function findPosY(obj) {
         var curtop = 0;
-        if(obj.offsetParent)
-          while(1)
-        {
-          curtop += obj.offsetTop;
-          if(!obj.offsetParent)
-            break;
-          obj = obj.offsetParent;
-        }
-          else if(obj.y)
+        if(obj.offsetParent) {
+          while(1) {
+            curtop += obj.offsetTop;
+            if(!obj.offsetParent) {
+              break;
+            }
+            obj = obj.offsetParent;
+          }
+        } else if(obj.y) {
           curtop += obj.y;
           return curtop;
+        }
       }
 
       var thumbnails = new Array(
@@ -49,105 +49,157 @@
         "thumb_8.png"
       )
 
-      thumbs = new Array()
-
-      for (thumb in thumbnails) {
-        var img = new Image()
-        img.src = thumbnails[thumb];
-        thumbs.push(img);
+      function init() {
+        new film_strip(document.getElementById('filmstreifen'), thumbnails);
       }
 
-      function init() {
-        for (var thumb in thumbs) {
-          if (!thumbs[thumb].complete) {
-            window.setTimeout("init", 500);
-            return;
-          }
+      function film_strip(container, image_urls) {
+        this.container = container;
+        this.images = new Array();
+
+        for (thumb in thumbnails) {
+          var img = new Image()
+          img.src = thumbnails[thumb];
+          this.images.push(img);
         }
-        fs = new Array();
-        fs[0] = new filmstreifen(0);
-        fs[1] = new filmstreifen(1);
-        for (var i = 2; i <= (800+fs[0].width)/fs[0].width; i++)
-          fs.push(new filmstreifen(i));
 
-        window.setInterval("move_forward(false)", 30);
-      
-        forward_button = document.createElement("a");
-        backward_button = document.createElement("a");
+        this.stripes = new Array();
 
-        backward_image = document.createElement("img");
-        forward_image = document.createElement("img");
+        this.stripe = function(start, film_strip) {
+          this.film_container = document.createElement("div");
+          this.width = 0;
+          film_strip.container.appendChild(this.film_container);
+          for (var thumb in film_strip.images) {
+            var img = film_strip.images[thumb].cloneNode(false);
+            img.onmouseover = function () {
+              this.id = 'curimg';
+              /*startgrowth();*/
+            }
+            this.film_container.appendChild(img);
+            this.width = img.width + 10 + this.width;
+          }
+          this.film_container.style.width = this.width+'px';
+          this.position = start * this.width;
+          this.film_container.style.left = this.position+'px';
+
+          this.stopped = false;
+
+          this.move_forward = function (force) {
+            if (!this.stopped || force) {
+              this.position -= 1;
+              if (this.position <= -this.width)
+                this.position = film_strip.total_width()-this.width;
+              this.film_container.style.left = this.position +'px';
+            }
+          }
+
+          this.move_backward = function (force) {
+            if (!this.stopped || force) {
+              this.position += 1;
+              if (this.position >= film_strip.total_width()-this.width)
+                this.position = -this.width;
+              this.film_container.style.left = this.position + 'px';
+            }
+          }
+
+          if (start + 1 < (film_strip.container.width+this.width)/this.width || start < 1) {
+            film_strip.stripes.push(new film_strip.stripe(start + 1, film_strip));
+          }
+
+          return this;
+        }
+
+        this.stripes.push(new this.stripe(0, this));
+
+        var strip = this;
+
+        this.forward_button = document.createElement("a");
+        this.backward_button = document.createElement("a");
+
+        var backward_image = document.createElement("img");
+        var forward_image = document.createElement("img");
 
         forward_image.src = "forward_img.png";
         backward_image.src = "backward_img.png";
 
-        forward_button.appendChild(forward_image);
-        backward_button.appendChild(backward_image);
+        this.forward_button.appendChild(forward_image);
+        this.backward_button.appendChild(backward_image);
 
-        forward_button.onmouseover = function () {
-          forward_interval = window.setInterval("move_forward(true)", 10);
-        }
-
-        forward_button.onmouseout = function () {
-          window.clearInterval(forward_interval);
-        }
-        
-        backward_button.onmouseover = function () {
-          backward_interval = window.setInterval("move_backward(true)", 10);
-        }
-
-        backward_button.onmouseout = function () {
-          window.clearInterval(backward_interval);
-        }
-
-        with (forward_button.style) {
-          display = "none";
-          position = "absolute";
-          left = "20px";
-          top = "30px";
-        }
-        with (backward_button.style) {
-          display = "none";
-          position = "absolute";
-          left = "700px";
-          top = "30px";
-        }
-        with (document.getElementById("filmstreifen")) {
-          appendChild(forward_button);
-          appendChild(backward_button);
-
+        with (this.forward_button) {
           onmouseover = function () {
-            for (f in fs)
-              fs[f].stopped = true;
-            forward_button.style.display = "block";
-            backward_button.style.display = "block";
+            this.forward_interval = window.setInterval(function() {strip.move_forward(true);}, 10);
+          }
+          onmouseout = function () {
+            window.clearInterval(this.forward_interval);
+          }
+
+          with (style) {
+            display = "none";
+            position = "absolute";
+            left = "20px";
+            top = "30px";
+          }
+        }
+
+        with (this.backward_button) {
+          onmouseover = function () {
+            this.backward_interval = window.setInterval(function() {strip.move_backward(true);}, 10);
           }
 
           onmouseout = function () {
-            for (f in fs)
-              fs[f].stopped = false;
-            forward_button.style.display = "none";
-            backward_button.style.display = "none";
+            window.clearInterval(this.backward_interval);
+          }
+
+          with (style) {
+            display = "none";
+            position = "absolute";
+            left = "700px";
+            top = "30px";
           }
         }
+
+        with (this.container) {
+          appendChild(this.forward_button);
+          appendChild(this.backward_button);
+        }
+
+
+        this.container.onmouseover = function () {
+          for (f in strip.stripes)
+            strip.stripes[f].stopped = true;
+          strip.forward_button.style.display = "block";
+          strip.backward_button.style.display = "block";
+        }
+        this.container.onmouseout = function () {
+          for (f in strip.stripes)
+            strip.stripes[f].stopped = false;
+          strip.forward_button.style.display = "none";
+          strip.backward_button.style.display = "none";
+        }
+
+        this.move_forward = function(force) {
+          for (f in this.stripes)
+            this.stripes[f].move_forward(force);
+        }
+
+        this.move_backward = function(force) {
+          for (f in this.stripes)
+            this.stripes[f].move_backward(force);
+        }
+
+        this.total_width = function() {
+          var result = 0;
+          for (f in this.stripes)
+            result += this.stripes[f].width;
+          return result;
+        }
+
+
+        window.setInterval(function() {strip.move_backward(false);}, 30);
+
+        return this;
       }
 
-      function move_forward(force) {
-        for (f in fs)
-          fs[f].move_forward(force);
-      }
-
-      function move_backward(force) {
-        for (f in fs)
-          fs[f].move_backward(force);
-      }
-
-      function total_width() {
-        var result = 0;
-        for (f in fs)
-          result += fs[f].width;
-        return result;
-      }
 
       function startgrowth() {
         curimg = document.getElementById('curimg');
@@ -225,46 +277,6 @@
       }
 
       
-      function filmstreifen(start) {
-        this.film_container = document.createElement("div");
-        this.width = 0;
-        document.getElementById("filmstreifen").appendChild(this.film_container);
-        for (var thumb in thumbs) {
-          img = thumbs[thumb].cloneNode(false);
-          img.onmouseover = function () {
-            this.id = 'curimg';
-            startgrowth();
-          }
-          this.film_container.appendChild(img);
-          this.width = img.width + 10 + this.width;
-        }
-        this.film_container.style.width = this.width+'px';
-        this.position = start * this.width;
-        this.film_container.style.left = this.position+'px';
-
-        this.stopped = false;
-
-        
-        this.move_forward = function (force) {
-          if (!this.stopped || force) {
-            this.position -= 1;
-            if (this.position <= -this.width)
-              this.position = total_width()-this.width;
-            this.film_container.style.left = this.position +'px';
-          }
-        }
-
-        this.move_backward = function (force) {
-          if (!this.stopped || force) {
-            this.position += 1;
-            if (this.position >= total_width()-this.width)
-              this.position = -this.width;
-            this.film_container.style.left = this.position + 'px';
-          }
-        }
-
-        return this;
-      }
       //]]>
     </script>
     <style type="text/css">

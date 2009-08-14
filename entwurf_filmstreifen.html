@@ -4,37 +4,21 @@
   <head>
     <title>Testseite</title>
     <script type="text/javascript">
-      //<![CDATA[
+      //<![CDATA
 
-      function findPosX(obj) {
-        var curleft = 0;
-        if (obj.offsetParent) {
-          while(1) {
-            curleft += obj.offsetLeft;
-            if(!obj.offsetParent) {
-              break;
-            }
-            obj = obj.offsetParent;
-          }
-        } else if(obj.x) {
-          curleft += obj.x;
-          return curleft;
+      function relPosX(parentNode, node) {
+        if (parentNode == node || !parentNode) {
+          return 0;
+        } else {
+          return relPosX(parentNode, node.offsetParent) + node.offsetLeft;
         }
       }
 
-      function findPosY(obj) {
-        var curtop = 0;
-        if(obj.offsetParent) {
-          while(1) {
-            curtop += obj.offsetTop;
-            if(!obj.offsetParent) {
-              break;
-            }
-            obj = obj.offsetParent;
-          }
-        } else if(obj.y) {
-          curtop += obj.y;
-          return curtop;
+      function relPosY(parentNode, node) {
+        if (parentNode == node || !parentNode) {
+          return 0;
+        } else {
+          return relPosY(parentNode, node.offsetParent) + node.offsetTop;
         }
       }
 
@@ -46,6 +30,7 @@
         this.container = container;
         this.images = document.createElement("div");
         this.images.width = 0;
+        this.stopped = false;
         var strip = this;
 
         for (var thumb in container.children) {
@@ -66,34 +51,65 @@
           this.position = start * strip.images.width;
           this.film_container.style.left = this.position+'px';
 
-          this.stopped = false;
 
-          this.move_forward = function (force) {
-            if (!this.stopped || force) {
-              this.position -= 1;
-              if (this.position <= -strip.images.width)
-                this.position = strip.total_width()-strip.images.width;
-              this.film_container.style.left = this.position +'px';
-            }
+          this.move_forward = function () {
+            this.position += 1;
+            if (this.position >= strip.total_width()-strip.images.width)
+              this.position = -strip.images.width;
+            this.film_container.style.left = this.position + 'px';
           }
 
-          this.move_backward = function (force) {
-            if (!this.stopped || force) {
-              this.position += 1;
-              if (this.position >= strip.total_width()-strip.images.width)
-                this.position = -strip.images.width;
-              this.film_container.style.left = this.position + 'px';
-            }
+          this.move_backward = function () {
+            this.position -= 1;
+            if (this.position <= -strip.images.width)
+              this.position = strip.total_width()-strip.images.width;
+            this.film_container.style.left = this.position +'px';
           }
 
           return this;
         }
 
         this.stripes = new Array();
+
+        this.img_growth = function() {
+          var img = this;
+          if (this.nodeName.toLowerCase() != "img") {
+            img = this.getElementsByTagName("img");
+            if (img.length > 0) {
+              img = img[0];
+            } else {
+              img = null;
+            }
+          }
+          if (img != null) {
+            var growimg = img.cloneNode(true);
+            strip.container.appendChild(growimg);
+
+            growimg.style.position = "absolute";
+            growimg.style.top = relPosY(strip.container, img) + "px";
+            growimg.style.left = relPosX(strip.container, img) + "px";
+
+            growimg.grow_interval = window.setInterval(function() {
+              growimg.width = growimg.width*1.04;
+              growimg.height = growimg.height*1.04;
+              growimg.style.top = ((img.height - growimg.height)/2 + relPosY(strip.container, img)) + "px";
+              growimg.style.left = ((img.width - growimg.width)/2 + relPosX(strip.container, img)) + "px";
+              if (growimg.width > img.width*1.4 || growimg.height > img.height*1.4) {
+                window.clearInterval(growimg.grow_interval);
+              }
+            }, 50);
+            growimg.onmouseout = function() {
+              strip.container.removeChild(growimg);
+            }
+          }
+        }
  
         for (var i = 0; i < 2 || i <= (this.container.offsetWidth+this.stripes[0].width)/this.stripes[0].width; i++) {
           var film_container = this.images.cloneNode(true);
           this.container.appendChild(film_container);
+          for (var img in film_container.children) {
+            film_container.children[img].onmouseover = this.img_growth;
+          }
           this.stripes.push(new this.stripe(i, film_container));
         }
 
@@ -121,6 +137,7 @@
             position = "absolute";
             left = "20px";
             top = "30px";
+            zIndex = 10;
           }
         }
 
@@ -138,6 +155,7 @@
             position = "absolute";
             left = "700px";
             top = "30px";
+            zIndex = 10;
           }
         }
 
@@ -148,26 +166,29 @@
 
 
         this.container.onmouseover = function () {
-          for (f in strip.stripes)
-            strip.stripes[f].stopped = true;
+          strip.stopped = true;
           strip.forward_button.style.display = "block";
           strip.backward_button.style.display = "block";
         }
+
         this.container.onmouseout = function () {
-          for (f in strip.stripes)
-            strip.stripes[f].stopped = false;
+          strip.stopped = false;
           strip.forward_button.style.display = "none";
           strip.backward_button.style.display = "none";
         }
 
         this.move_forward = function(force) {
-          for (f in this.stripes)
-            this.stripes[f].move_forward(force);
+          if (!this.stopped || force) {
+            for (f in this.stripes)
+              this.stripes[f].move_forward();
+          }
         }
 
         this.move_backward = function(force) {
-          for (f in this.stripes)
-            this.stripes[f].move_backward(force);
+          if (!this.stopped || force) {
+            for (f in this.stripes)
+              this.stripes[f].move_backward();
+          }
         }
 
         this.total_width = function() {
@@ -179,83 +200,6 @@
 
         return this;
       }
-
-
-      function startgrowth() {
-        curimg = document.getElementById('curimg');
-        var endwidth = curimg.width*1.2;
-        var endheight = curimg.height*1.2;
-        newimg = curimg.cloneNode(false);
-        newimg.style.position = 'absolute';
-        newimg.style.display = 'block';
-        newimg.style.zIndex = 100;
-        newimg.style.top = findPosY(curimg)+'px';
-        newimg.style.left = findPosX(curimg)+'px';
-        newimg.id = 'growimg';
-        newimg.onmouseout = function () {
-          stopgrowth();
-        }
-        document.getElementsByTagName('body')[0].appendChild(newimg);
-        curimggrowth = window.setInterval('grow('+curimg.width+','+curimg.height+','+endwidth+','+endheight+')', 10);
-      }
-      function stopgrowth() {
-        window.clearInterval(curimggrowth);
-        document.getElementsByTagName('body')[0].removeChild(newimg);
-        curimg.id = '';
-      }
-
-      function grow(width, height, newwidth, newheight) {
-        var img = document.getElementById('growimg');
-        if (img.width == newwidth)
-          window.clearInterval(curimggrowth);
-        var nextwidth = img.width+(newwidth-width)/100;
-        var nextheight = img.height+(newheight-height)/100;
-        var newx = findPosX(img)-(nextwidth-img.width)/2;
-        var newy = findPosY(img)-(nextheight-img.height)/2;
-        img.width = nextwidth;
-        img.style.left = newx;
-        img.height = nextheight;
-        img.style.top = newy;
-      }
-
-      function growth(img) {
-        this.img = img;
-
-        this.endwidth = this.img.width*1.2;
-        this.endheight = this.img.height*1.2;
-        
-        this.startx = findPosX(this.img);
-        this.starty = findPosY(this.img);
-
-        this.curx = this.starx;
-        this.cury = this.starty;
-
-        this.growimg = this.img.cloneNode(false);
-
-        with (this.growimg.style) {
-          position = 'absolute';
-          display = 'block';
-          zIndex = 100;
-          left = this.startx+'px';
-          top = this.starty+'px';
-        }
-
-        document.getElementyByName('body')[0].appendChild(this.growimg);
-
-        this.grow = function () {
-          if (img.width == newwidth)
-            window.clearInterval(curimggrowth);
-          var nextwidth = img.width+(newwidth-width)/100;
-          var nextheight = img.height+(newheight-height)/100;
-          var newx = findPosX(img)-(nextwidth-img.width)/2;
-          var newy = findPosY(img)-(nextheight-img.height)/2;
-          img.width = nextwidth;
-          img.style.left = newx;
-          img.height = nextheight;
-          img.style.top = newy;
-        }
-      }
-
       
       //]]>
     </script>
